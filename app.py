@@ -20,9 +20,12 @@ def print_request():
 @app.route('/symbols', methods=['POST'])
 def get_symbols():
     payload = request.get_data()
+    print('')
     try:
         response = requests.post('https://symbols.mozilla.org/symbolicate/v5', payload)
         response.raise_for_status()
+        print('Good:')
+        print(payload)
         return Response(response.text, mimetype='application/json')
     except requests.HTTPError:
         print('Error:')
