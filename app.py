@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
 from flask import Flask, Response, request
+import requests
 
 app = Flask(__name__)
 
@@ -14,6 +15,19 @@ def hello_world():
 def print_request():
     print(request.get_data(as_text=True))
     return Response('{}', mimetype='application/json')
+
+
+@app.route('/symbols', methods=['POST'])
+def get_symbols():
+    payload = request.get_data()
+    try:
+        response = requests.post('https://symbols.mozilla.org/symbolicate/v5', payload)
+        response.raise_for_status()
+        return Response(response.text, mimetype='application/json')
+    except requests.HTTPError:
+        print('Error:')
+        print(payload)
+        return Response('{}', mimetype='application/json')
 
 
 def parse_args():
