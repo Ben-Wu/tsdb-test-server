@@ -1,9 +1,13 @@
+import json
 from argparse import ArgumentParser
 
-from flask import Flask, Response, request
 import requests
+from flask import Flask, Response, request
+from siggen.generator import SignatureGenerator
 
 app = Flask(__name__)
+
+generator = SignatureGenerator()
 
 
 @app.route('/')
@@ -26,11 +30,47 @@ def get_symbols():
         response.raise_for_status()
         print('Good:')
         print(payload)
+        #print('Response:')
+        #print(response.text)
+        print('Signature:')
+        crash_data = response.json()
+        symbolicated = {'crashing_thread': 0, 'threads': []}
+        for frames in crash_data['results'][0]['stacks']:
+            symbolicated['threads'].append({'frames': frames})
+        try:
+            print(generator.generate(symbolicated)['signature'])
+        except KeyError:
+            print('no signature')
         return Response(response.text, mimetype='application/json')
     except requests.HTTPError:
         print('Error:')
         print(payload)
         return Response('{}', mimetype='application/json')
+
+
+@app.route('/symbols/<int:crashing_thread>', methods=['POST'])
+def get_signature(crashing_thread):
+    payload = request.get_data()
+    print('')
+    try:
+        response = requests.post('https://symbols.mozilla.org/symbolicate/v5', payload)
+        response.raise_for_status()
+        print('Good:')
+        print(payload)
+        #print('Response:')
+        #print(response.text)
+        print('Signature:')
+        crash_data = response.json()
+        symbolicated = {'crashing_thread': crashing_thread, 'threads': []}
+        for frames in crash_data['results'][0]['stacks']:
+            symbolicated['threads'].append({'frames': frames})
+        signature = generator.generate(symbolicated)['signature']
+        print(signature)
+        return Response(signature, mimetype='text/plain')
+    except requests.HTTPError:
+        print('Error:')
+        print(payload)
+        return Response('', mimetype='application/json')
 
 
 def parse_args():
