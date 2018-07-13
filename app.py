@@ -1,7 +1,7 @@
-import json
 from argparse import ArgumentParser
 
 import requests
+import ujson as json
 from flask import Flask, Response, request
 from siggen.generator import SignatureGenerator
 
@@ -19,6 +19,23 @@ def hello_world():
 def print_request():
     print(request.get_data(as_text=True))
     return Response('{}', mimetype='application/json')
+
+
+@app.route('/sendToInflux', methods=['POST'])
+def send_to_influx():
+    data = json.loads(request.get_data(as_text=True))
+    url = data['url']
+    payload = data['payload']
+
+    response = requests.post(url, payload)
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(e.message)
+        print(payload)
+        return Response(e.message, mimetype='text/plain')
+
+    return Response("good", mimetype='text/plain')
 
 
 @app.route('/symbols', methods=['POST'])
