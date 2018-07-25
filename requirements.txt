@@ -1,3 +1,4 @@
 Flask==1.0.2
+fx-crash-sig
 requests==2.19.1
 siggen==0.1.1

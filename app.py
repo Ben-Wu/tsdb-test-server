@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
+from random import random
 
 import requests
 import ujson as json
 from flask import Flask, Response, request
+from fx_crash_sig import crash_processor
 from siggen.generator import SignatureGenerator
 
 app = Flask(__name__)
@@ -47,8 +49,6 @@ def get_symbols():
         response.raise_for_status()
         print('Good:')
         print(payload)
-        #print('Response:')
-        #print(response.text)
         print('Signature:')
         crash_data = response.json()
         symbolicated = {'crashing_thread': 0, 'threads': []}
@@ -65,29 +65,18 @@ def get_symbols():
         return Response('{}', mimetype='application/json')
 
 
-@app.route('/symbols/<int:crashing_thread>', methods=['POST'])
-def get_signature(crashing_thread):
+@app.route('/signature', methods=['POST'])
+def get_signature():
+    n = random()
+    print('Signature Request {}'.format(n))
     payload = request.get_data()
-    print('')
-    try:
-        response = requests.post('https://symbols.mozilla.org/symbolicate/v5', payload)
-        response.raise_for_status()
-        print('Good:')
-        print(payload)
-        #print('Response:')
-        #print(response.text)
-        print('Signature:')
-        crash_data = response.json()
-        symbolicated = {'crashing_thread': crashing_thread, 'threads': []}
-        for frames in crash_data['results'][0]['stacks']:
-            symbolicated['threads'].append({'frames': frames})
-        signature = generator.generate(symbolicated)['signature']
-        print(signature)
-        return Response(signature, mimetype='text/plain')
-    except requests.HTTPError:
-        print('Error:')
-        print(payload)
-        return Response('', mimetype='application/json')
+    cp = crash_processor.CrashProcessor(verbose=True)
+
+    sig = cp.get_signature(json.loads(payload))
+
+    print('Signature Response {}'.format(n))
+
+    return Response(json.dumps(sig), mimetype='text/plain')
 
 
 def parse_args():
